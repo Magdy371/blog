@@ -12,3 +12,34 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// prisma/schema.prisma
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  userRoles UserRole[]
+}
+
+//Many to Many relationship between User and Role through UserRole
+model Role {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  userRoles   UserRole[]
+}
+
+// This is the join table
+model UserRole {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId]) // A composite primary key to ensure uniqueness
+}
