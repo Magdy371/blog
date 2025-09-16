@@ -3,6 +3,7 @@ import { CreateUserDto } from './DTOs/createUser.dto';
 import { UpdateUserDto } from './DTOs/updateUser.dto';
 import { User } from '@prisma/client';
 import { PrismaService} from "../prisma/prisma.service";
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService{
@@ -23,11 +24,12 @@ export class UserService{
 
 
     async create(data:CreateUserDto): Promise<User> {
+        const hashedPassword = await bcrypt.hash(data.password, 10);
         const user = await this.prisma.user.create({
            data:{
                email:data.email,
                name:data.name,
-               password:data.password,
+               password:hashedPassword,
                userRoles:data.roleIds?{
                    create:data.roleIds.map((roleId) => ({
                        role: { connect: { id: roleId } },
@@ -65,11 +67,15 @@ export class UserService{
         if (!foundedUser) {
             throw new Error('User not found');
         }
+        let newPassword = foundedUser.password;
+        if (dto.password) {
+            newPassword = await bcrypt.hash(dto.password, 10);
+        }
         const user = await this.prisma.user.update({
             where: { id },
             data: {
                 email: dto.email || foundedUser.email,
-                password: dto.password || foundedUser.password,
+                password: newPassword,
                 name: dto.name || foundedUser.name,
                 userRoles: dto.roleIds
                     ? {
